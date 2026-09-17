@@ -23,13 +23,65 @@ impl GitProgress<'_> {
     }
 }
 type ProgressSink<'a> = &'a (dyn Fn(GitProgress<'_>) + Sync);
+#[derive(Clone, Copy)]
+enum Access {
+    Local,
+    Network,
+}
+
+// Reading objects must never contact a repository-controlled remote, even on
+// Git versions predating GIT_NO_LAZY_FETCH. Both Git execution paths use this
+// builder so streamed diffs have the same protections as metadata reads.
+fn command(dir: Option<&Path>, access: Access) -> Command {
+    let mut cmd = Command::new("git");
+    for (key, _) in std::env::vars_os() {
+        if key.to_string_lossy().starts_with("GIT_") {
+            cmd.env_remove(key);
+        }
+    }
+    cmd.args(["--no-pager", "--literal-pathspecs"]);
+    for setting in [
+        "core.hooksPath=/dev/null",
+        "core.fsmonitor=false",
+        "core.quotePath=true",
+        "color.ui=false",
+        "core.alternateRefsCommand=:",
+        "log.showSignature=false",
+        "gc.auto=0",
+        "maintenance.auto=false",
+        "fetch.recurseSubmodules=false",
+        "submodule.recurse=false",
+        "protocol.allow=never",
+    ] {
+        cmd.args(["-c", setting]);
+    }
+    if let Some(dir) = dir {
+        cmd.arg("-C").arg(dir);
+    }
+    // Unit fixtures use a loopback git-daemon. Shipped binaries only allow HTTPS.
+    let protocols = if matches!(access, Access::Network) {
+        if cfg!(test) { "https:git" } else { "https" }
+    } else {
+        ""
+    };
+    cmd.env("GIT_ALLOW_PROTOCOL", protocols)
+        .env_remove("TYPESAFE_API_KEY")
+        .env("GIT_NO_LAZY_FETCH", "1")
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_LFS_SKIP_SMUDGE", "1")
+        .env("GIT_OPTIONAL_LOCKS", "0")
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .kill_on_drop(true);
+    cmd
+}
 pub async fn run(
     dir: Option<&Path>,
     args: &[&str],
     cancel: &CancellationToken,
     max: usize,
 ) -> Result<String> {
-    run_observed(dir, args, cancel, max, None).await
+    run_observed(dir, args, cancel, max, None, Access::Local).await
 }
 async fn run_observed(
     dir: Option<&Path>,
@@ -37,26 +89,11 @@ async fn run_observed(
     cancel: &CancellationToken,
     max: usize,
     progress: Option<ProgressSink<'_>>,
+    access: Access,
 ) -> Result<String> {
     ensure!(!cancel.is_cancelled(), "Cancelled");
-    let mut cmd = Command::new("git");
-    cmd.args([
-        "--literal-pathspecs",
-        "-c",
-        "core.hooksPath=/dev/null",
-        "-c",
-        "protocol.file.allow=never",
-        "-c",
-        "core.quotePath=true",
-    ]);
-    if let Some(d) = dir {
-        cmd.arg("-C").arg(d);
-    }
+    let mut cmd = command(dir, access);
     cmd.args(args)
-        .env("GIT_TERMINAL_PROMPT", "0")
-        .env("GIT_LFS_SKIP_SMUDGE", "1")
-        .env("GIT_OPTIONAL_LOCKS", "0")
-        .stdin(Stdio::null())
         .stderr(if progress.is_some() {
             Stdio::piped()
         } else {
@@ -144,9 +181,68 @@ async fn network(
     c: &CancellationToken,
     progress: ProgressSink<'_>,
 ) -> Result<String> {
+    validate_network_repository(dir, c).await?;
     let mut args = args.to_vec();
     args.insert(1, "--progress");
-    run_observed(Some(dir), &args, c, usize::MAX, Some(progress)).await
+    args.insert(2, "--no-recurse-submodules");
+    args.insert(3, "--no-auto-maintenance");
+    run_observed(
+        Some(dir),
+        &args,
+        c,
+        usize::MAX,
+        Some(progress),
+        Access::Network,
+    )
+    .await
+}
+
+// Managed clones only need the configuration Git itself writes when cloning.
+// Do not execute credentials, transport helpers, includes, or other extensions
+// added to their local config. User/system credentials remain available.
+async fn validate_network_repository(dir: &Path, c: &CancellationToken) -> Result<()> {
+    let config = run(
+        Some(dir),
+        &["config", "--local", "--null", "--list", "--includes"],
+        c,
+        1024 * 1024,
+    )
+    .await?;
+    for entry in config.split('\0').filter(|s| !s.is_empty()) {
+        let key = entry.split_once('\n').map_or(entry, |(key, _)| key);
+        let safe = matches!(
+            key,
+            "core.repositoryformatversion"
+                | "core.filemode"
+                | "core.bare"
+                | "core.logallrefupdates"
+                | "core.ignorecase"
+                | "core.precomposeunicode"
+                | "extensions.objectformat"
+                | "extensions.refstorage"
+                | "remote.origin.url"
+                | "remote.origin.fetch"
+        ) || key.starts_with("branch.")
+            && (key.ends_with(".remote") || key.ends_with(".merge"));
+        // The existing network tests serve their GitHub fixture over loopback.
+        let fixture =
+            cfg!(test) && key.starts_with("url.git://127.0.0.1:") && key.ends_with(".insteadof");
+        ensure!(
+            safe || fixture,
+            "Saved repository contains unsupported Git configuration ({key}); use a fresh data directory"
+        );
+    }
+    let original = git(dir, &["config", "--get", "remote.origin.url"], c).await?;
+    let effective = git(dir, &["remote", "get-url", "origin"], c).await?;
+    if cfg!(test) && effective.trim().starts_with("git://127.0.0.1:") {
+        return Ok(());
+    }
+    let expected = github_url(original.trim())?;
+    ensure!(
+        github_url(effective.trim())?.eq_ignore_ascii_case(&expected),
+        "Git URL rewriting changed the saved repository's origin"
+    );
+    Ok(())
 }
 pub fn github_url(input: &str) -> Result<String> {
     let url = url::Url::parse(input).context("Use https://github.com/owner/repository")?;
@@ -191,7 +287,7 @@ pub async fn repository_with_progress(
     cancel: &CancellationToken,
     progress: ProgressSink<'_>,
 ) -> Result<PathBuf> {
-    // Local repositories are accepted too; Git is read without checkout or hooks.
+    // Local history is read offline, without checkout, hooks or signature helpers.
     let local = Path::new(source);
     if local.is_dir() {
         progress(GitProgress::Stage(&format!(
@@ -269,6 +365,8 @@ pub async fn repository_with_progress(
                 "clone",
                 "--progress",
                 "--no-checkout",
+                "--no-recurse-submodules",
+                "--template=",
                 "--depth",
                 &depth.to_string(),
                 "--",
@@ -278,6 +376,7 @@ pub async fn repository_with_progress(
             cancel,
             8 * 1024 * 1024,
             Some(progress),
+            Access::Network,
         )
         .await;
         if let Err(e) = result {
@@ -353,7 +452,7 @@ async fn single_commit(
         .context("Could not fetch the requested commit from origin")?;
         resolved = resolve_commit(dir, reference, c).await;
     }
-    if resolved.is_err() && !c.is_cancelled() && shallow(dir, c).await? {
+    if resolved.is_err() && remote_source && !c.is_cancelled() && shallow(dir, c).await? {
         progress(GitProgress::Stage(
             "Fetching full history to resolve the requested commit",
         ));
@@ -381,6 +480,10 @@ async fn single_commit(
                 .lines()
                 .any(|line| line.starts_with("parent "))
             {
+                ensure!(
+                    remote_source,
+                    "Selected commit's parent is outside the local shallow history; fetch the required history yourself before scanning"
+                );
                 progress(GitProgress::Stage(
                     "Fetching parent history for the selected diff",
                 ));
@@ -413,13 +516,14 @@ pub async fn history_with_progress(
     c: &CancellationToken,
     progress: ProgressSink<'_>,
 ) -> Result<Vec<String>> {
+    let remote_source = !Path::new(&o.source).is_dir();
     if let Some(reference) = &o.commit {
         ensure!(
             o.limit.is_none() && o.since.is_none() && o.until.is_none() && !o.first_parent,
             "--commit cannot be combined with history selection options"
         );
         return Ok(vec![
-            single_commit(dir, reference, !Path::new(&o.source).is_dir(), c, progress).await?,
+            single_commit(dir, reference, remote_source, c, progress).await?,
         ]);
     }
     progress(GitProgress::Stage("Reading commit history"));
@@ -430,6 +534,10 @@ pub async fn history_with_progress(
     };
     if o.since.is_some() || o.until.is_some() {
         if shallow(dir, c).await? {
+            ensure!(
+                remote_source,
+                "A complete date range requires history outside the local shallow repository; fetch the required history yourself before scanning"
+            );
             progress(GitProgress::Stage(
                 "Fetching full history for the date range",
             ));
@@ -487,6 +595,10 @@ pub async fn history_with_progress(
         .map(str::to_owned)
         .collect::<Vec<_>>();
     while ids.len() <= n && shallow(dir, c).await? {
+        ensure!(
+            remote_source,
+            "Requested history reaches the local shallow boundary; fetch the required history yourself before scanning"
+        );
         progress(GitProgress::Stage(&format!(
             "Fetching more history · {} commits available",
             ids.len()
@@ -852,19 +964,8 @@ async fn diff_sections(
     c: &CancellationToken,
 ) -> Result<Vec<Evidence>> {
     ensure!(!c.is_cancelled(), "Cancelled");
-    let mut cmd = Command::new("git");
+    let mut cmd = command(Some(dir), Access::Local);
     cmd.args([
-        "--literal-pathspecs",
-        "-c",
-        "core.hooksPath=/dev/null",
-        "-c",
-        "protocol.file.allow=never",
-        "-c",
-        "core.quotePath=true",
-    ])
-    .arg("-C")
-    .arg(dir)
-    .args([
         "diff",
         "--no-ext-diff",
         "--no-textconv",
@@ -876,10 +977,6 @@ async fn diff_sections(
         "--",
         file,
     ])
-    .env("GIT_TERMINAL_PROMPT", "0")
-    .env("GIT_LFS_SKIP_SMUDGE", "1")
-    .env("GIT_OPTIONAL_LOCKS", "0")
-    .stdin(Stdio::null())
     .stderr(Stdio::null())
     .stdout(Stdio::piped())
     .kill_on_drop(true);
