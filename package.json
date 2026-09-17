@@ -1,0 +1,27 @@
+{
+  "name": "commit-miner-viewer",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && node scripts/build.mjs",
+    "test": "cargo test --locked",
+    "test:ui": "playwright test"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.0"
+  },
+  "description": "Development sources for the HTML viewer embedded in the Rust commit-miner binary"
+}

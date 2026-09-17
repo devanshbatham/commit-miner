@@ -1,0 +1,1 @@
+skills/commit-miner/SKILL.md

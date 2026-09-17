@@ -1,0 +1,260 @@
+{
+  "categories": [
+    {
+      "id": "logic",
+      "label": "Logic / state",
+      "family": "bug",
+      "description": "incorrect control flow, business logic or state transitions"
+    },
+    {
+      "id": "boundary",
+      "label": "Boundary / arithmetic",
+      "family": "bug",
+      "description": "off-by-one errors, numeric overflow or wrong boundary handling"
+    },
+    {
+      "id": "resource",
+      "label": "Resource lifecycle",
+      "family": "bug",
+      "description": "resource leaks or incorrect allocation, cleanup or lifetime management"
+    },
+    {
+      "id": "concurrency",
+      "label": "Concurrency",
+      "family": "bug",
+      "description": "races, deadlocks or incorrect synchronization"
+    },
+    {
+      "id": "error_handling",
+      "label": "Error handling",
+      "family": "bug",
+      "description": "incorrect exception handling, missing error checks or recovery behavior"
+    },
+    {
+      "id": "compatibility",
+      "label": "Compatibility",
+      "family": "bug",
+      "description": "broken platform, version, protocol or integration compatibility"
+    },
+    {
+      "id": "data_integrity",
+      "label": "Data integrity",
+      "family": "bug",
+      "description": "incorrect serialization, persistence, parsing or data transformation"
+    },
+    {
+      "id": "performance",
+      "label": "Performance bug fix",
+      "family": "bug",
+      "description": "pathological runtime, excessive work or unintended performance regressions"
+    },
+    {
+      "id": "ui_behavior",
+      "label": "UI / accessibility",
+      "family": "bug",
+      "description": "incorrect user-interface behavior or inaccessible interaction"
+    },
+    {
+      "id": "other_bug",
+      "label": "Other bug",
+      "family": "bug",
+      "description": "a behavioral bug that is not covered by logic/state, boundary/arithmetic, resource lifecycle, concurrency, error handling, compatibility, data integrity, performance, or UI/accessibility"
+    },
+    {
+      "id": "cwe_79",
+      "label": "Cross-site scripting",
+      "family": "security",
+      "cwe": 79,
+      "description": "untrusted content reaching an executable browser HTML or script context without appropriate neutralization"
+    },
+    {
+      "id": "cwe_89",
+      "label": "SQL injection",
+      "family": "security",
+      "cwe": 89,
+      "description": "untrusted input changing the structure of an SQL command"
+    },
+    {
+      "id": "cwe_78",
+      "label": "OS command injection",
+      "family": "security",
+      "cwe": 78,
+      "description": "untrusted input changing an operating-system command"
+    },
+    {
+      "id": "cwe_22",
+      "label": "Path traversal",
+      "family": "security",
+      "cwe": 22,
+      "description": "untrusted paths escaping the intended restricted directory"
+    },
+    {
+      "id": "cwe_287",
+      "label": "Improper authentication",
+      "family": "security",
+      "cwe": 287,
+      "description": "failure to correctly verify an actor’s claimed identity"
+    },
+    {
+      "id": "cwe_862",
+      "label": "Missing authorization",
+      "family": "security",
+      "cwe": 862,
+      "description": "an absent permission check before access to a protected resource or action"
+    },
+    {
+      "id": "cwe_200",
+      "label": "Information exposure",
+      "family": "security",
+      "cwe": 200,
+      "description": "sensitive information exposed to an unauthorized actor"
+    },
+    {
+      "id": "cwe_416",
+      "label": "Use after free",
+      "family": "security",
+      "cwe": 416,
+      "description": "access to memory after its allocation has been freed"
+    },
+    {
+      "id": "cwe_787",
+      "label": "Out-of-bounds write",
+      "family": "security",
+      "cwe": 787,
+      "description": "writing outside the bounds of an allocated memory buffer"
+    },
+    {
+      "id": "cwe_125",
+      "label": "Out-of-bounds read",
+      "family": "security",
+      "cwe": 125,
+      "description": "reading outside the bounds of an allocated memory buffer"
+    },
+    {
+      "id": "cwe_362",
+      "label": "Race condition",
+      "family": "security",
+      "cwe": 362,
+      "description": "a security-relevant race in concurrent access to shared state without proper synchronization"
+    },
+    {
+      "id": "cwe_400",
+      "label": "Resource exhaustion",
+      "family": "security",
+      "cwe": 400,
+      "description": "uncontrolled resource consumption allowing denial of service"
+    },
+    {
+      "id": "cwe_918",
+      "label": "Server-side request forgery",
+      "family": "security",
+      "cwe": 918,
+      "description": "an attacker influencing a server to send unintended requests to other resources"
+    },
+    {
+      "id": "cwe_352",
+      "label": "Cross-site request forgery",
+      "family": "security",
+      "cwe": 352,
+      "description": "a site accepting an attacker-induced authenticated request without checking the user’s intent"
+    },
+    {
+      "id": "cwe_502",
+      "label": "Unsafe deserialization",
+      "family": "security",
+      "cwe": 502,
+      "description": "deserialization of untrusted data with unsafe object or code effects"
+    },
+    {
+      "id": "cwe_327",
+      "label": "Broken cryptography",
+      "family": "security",
+      "cwe": 327,
+      "description": "use of a cryptographic algorithm that is broken or too risky for the security purpose"
+    },
+    {
+      "id": "other_security",
+      "label": "Other security weakness",
+      "family": "security",
+      "description": "a security weakness outside XSS, SQL/OS command injection, path traversal, authentication, missing authorization, information exposure, memory bounds/lifetime, races, resource exhaustion, SSRF, CSRF, unsafe deserialization, and broken cryptographic algorithms"
+    },
+    {
+      "id": "change_performance",
+      "label": "Performance improvement",
+      "family": "change",
+      "description": "reduce latency, runtime work, memory use or I/O, or improve throughput or scalability; an existing defect is not required"
+    },
+    {
+      "id": "change_feature",
+      "label": "New feature",
+      "family": "change",
+      "description": "add or extend an externally usable capability or behavior"
+    },
+    {
+      "id": "change_refactor",
+      "label": "Refactoring",
+      "family": "change",
+      "description": "restructure implementation while preserving intended externally observable behavior"
+    },
+    {
+      "id": "change_hardening",
+      "label": "Security hardening",
+      "family": "change",
+      "description": "strengthen security controls or defense in depth, even without evidence of a specific pre-existing vulnerability"
+    },
+    {
+      "id": "change_dependency",
+      "label": "Dependency",
+      "family": "change",
+      "description": "add, remove, upgrade, downgrade, pin or otherwise update a dependency, including version or resolution changes in manifests and lockfiles, or adapt source code to a changed library, dependency, framework or runtime API"
+    },
+    {
+      "id": "change_observability",
+      "label": "Observability",
+      "family": "change",
+      "description": "add or improve diagnostic logging, metrics, tracing, profiling or operational visibility"
+    },
+    {
+      "id": "change_compatibility",
+      "label": "Compatibility expansion",
+      "family": "change",
+      "description": "add support for a platform, protocol, format or version, without requiring previously broken support"
+    },
+    {
+      "id": "change_build",
+      "label": "Build / deployment",
+      "family": "change",
+      "description": "change executable build, packaging, deployment or release automation"
+    },
+    {
+      "id": "change_resilience",
+      "label": "Reliability improvement",
+      "family": "change",
+      "description": "improve recovery, retries, fault tolerance or graceful degradation, without requiring a demonstrated prior defect"
+    },
+    {
+      "id": "change_cleanup",
+      "label": "Code cleanup",
+      "family": "change",
+      "description": "remove dead or redundant code or improve names, organization or maintainability"
+    },
+    {
+      "id": "change_api",
+      "label": "API / schema change",
+      "family": "change",
+      "description": "change a public interface, data contract, persistent schema or wire format"
+    },
+    {
+      "id": "change_ux",
+      "label": "UX / accessibility improvement",
+      "family": "change",
+      "description": "improve user interaction, presentation, usability or accessibility without requiring a demonstrated prior defect"
+    }
+  ],
+  "coreQuestions": {
+    "bug_fix": "Does the actual code change correct a pre-existing defect in behavior? Feature additions, pure refactoring, documentation-only edits and a claimed fix in the message without code evidence are not sufficient.",
+    "security_fix": "Does the actual code change mitigate a pre-existing security weakness that could affect confidentiality, integrity or availability? Do not infer security impact merely because a normal bug was fixed or the message claims security.",
+    "behavior_change": "Does this change alter executable behavior, rather than only formatting, comments, documentation or equivalent refactoring?",
+    "insufficient_context": "Is the supplied evidence insufficient to reliably determine whether this change fixes a pre-existing bug or security weakness?"
+  }
+}
