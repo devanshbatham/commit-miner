@@ -1,6 +1,6 @@
 # commit-miner
 
-Classify Git commit diffs and messages with Jev. Bug fixes, security fixes/CWEs, and change types. Rust CLI + offline HTML reports.
+Classify Git commit diffs and messages with Jev. Bug fixes, security fixes/CWEs, and change types.
 
 ## Install
 
@@ -23,8 +23,6 @@ commit-miner scan . --commit SHA_OR_REF
 commit-miner scan . --since 2026-01-01 --until 2026-03-31 -o report.html
 commit-miner scan . -n 500 -o report.csv
 ```
-
-Default: streaming results, progress/elapsed time, then a Commit / Message / Type-CWE / Date table. HTML opens directly in a browser; no server. CSV contains Commit, Message, Type, CWE, Date.
 
 | Argument | Meaning |
 | --- | --- |
